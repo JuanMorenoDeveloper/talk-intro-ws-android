@@ -4,8 +4,9 @@
 :conference-tag:
 :talk-tag: Intro WS&Android
 :linkattrs:
+ifndef::partials[:partials: partials]
 
-include::footer.ad[]
+include::{partials}/footer.ad[]
 
 == Conceptos de Web Services icon:lightbulb[]
 
@@ -44,8 +45,7 @@ Si bien SOAP se puede ver como una tecnología más potente y estructurada que R
 
 == REST y Android
 
-* En Android para hacer llamadas a servicios REST se utilizaba la clase HttpClient, la cual estaba incluida en el SDK hasta el API 22.
-A partir del API 23 se recomienda usar la clase HttpURLConnection.
+* En Android para hacer llamadas a servicios REST se utilizaba la clase HttpClient, la cual estaba incluida en el SDK hasta el API 22. A partir del API 23 se recomienda usar la clase HttpURLConnection.
 * El intercambio de datos en REST es a través de notación JSON o cadenas de texto definidas por el usuario
 
 [NOTE.speaker]
@@ -68,38 +68,44 @@ GET, POST, PUT y DELETE
 ** http://192.168.10.1/rs/Clientes/Cliente
 
 == JSON
+
 * JSON es una notación de objetos originada en el lenguaje JavaScript
 * Sitio Web Oficial de JSON: http://www.json.org/
 
 == Ejemplos de JSON
 
-```json
+[source,json]
+----
 {
   "Nombre": "juan",
   "cel": "099123456",
   "documento": 41112223
 }
-```
+----
 
 == Ejemplos de JSON
-```json
+
+[source,json]
+----
 {
   "id": 5,
   "nombreCompleto": {
-    "nombre": "juan",
-    "apellido": "mora"
+    "nombre": "Juan",
+    "apellido": "Mora"
   },
   "tipoDocumento": "Pasaporte",
   "documento": 98888887
 }
-```
+----
+
 == Permisos para invocación de servicios
 
 **Importante:** Para poder acceder a Internet la aplicación debe solicitar dicho permiso, declarándolo en el archivo AndroidManifest.xml
 
-```xml
+[source,xml]
+----
 <uses-permission android:name="android.permission.INTERNET"/>
-```
+----
 
 == ¿Cómo hacer una consulta HTTP?
 
@@ -107,8 +113,105 @@ GET, POST, PUT y DELETE
 2. Debemos crear una petición POST o GET con la URL del servicio
 3. Configuramos el content-type para indicar el formato de intercambio de datos, en el próximo ejemplo utilizaremos JSON
 
+== ¿Cómo hacer una consulta HTTP?
 
+[source,kotlin]
+----
+val url = URL(urlServer)
+val httpURLConnection = url.openConnection() as HttpURLConnection
+httpURLConnection.setRequestProperty("Content-Type",
+    "application/json; charset=UTF-8")
+httpURLConnection.requestMethod = "POST"
+----
 
+== ¿Cómo hacer una consulta HTTP?
 
+Luego debemos crear un objeto JSON con los datos a enviar en la petición, para eso utilizaremos la clase `JSONObject`, incluida en el SDK.
 
-include::self.ad[]
+Una vez creado el objeto JSON debemos asignarlo en la petición POST.
+
+== ¿Cómo hacer una consulta HTTP?
+
+[source,kotlin]
+----
+val jsonObject = JSONObject()
+jsonObject.put("id", "15")
+jsonObject.put("nombre", "Marc")
+jsonObject.put("email", "marc@test.com")
+jsonObject.put("edad", "47")
+----
+
+== ¿Cómo hacer una consulta por HTTP?
+
+Con el objeto httpURLConnection creado y configurado, debemos solicitar el flujo de datos de escritura o lectura de la petición.
+A través del flujo de datos se escribe o se lee a la dirección de destino.
+La respuesta es un String que según los datos del origen pueden ser convertidas a un objeto JSON.
+
+== ¿Cómo hacer una consulta por HTTP?
+
+[source,kotlin]
+----
+val out = OutputStreamWriter(httpURLConnection.outputStream)
+out.write("persona=${clienteJson.toString()}")
+out.close()
+val `in` = BufferedReader(
+        InputStreamReader(httpURLConnection.inputStream))
+inputLine = `in`.readLine()
+while (null != (inputLine)) {
+    result.append(inputLine)
+    inputLine = `in`.readLine()
+}
+`in`.close()
+//Procesar resultado
+----
+
+== ¿Cómo hacer una consulta HTTP?
+
+Según se vio anteriormente, Android no permite hacer tareas de larga duración que bloqueen la interfaz, en el hilo principal de la aplicación.
+Las conexiones a internet esta prohibidas por la plataforma en el hilo principal, directamente el SDK no nos permite ejecutar una conexión a internet en ese hilo.
+Para lograr hacer una conexión a internet debemos ejecutar una tarea en segundo plano (Threads o Corrutinas).
+
+== Invocación HTTP usando Threads
+
+Como se demostró en el teórico de tareas en segundo plano, se puede usar un executor para ejecutar la petición:
+
+[source,kotlin]
+----
+fun sendRequest() {
+    executor.execute {
+        //Envío de petición
+    }
+}
+----
+
+== Invocación HTTP usando Corrutinas
+
+Para hacer la petición con corrutinas se recomienda usar el `Dispatchers.IO`:
+
+[source,kotlin]
+----
+suspend fun sendRequest() {
+    withContext(Dispatchers.IO) {
+        //Envío de petición
+    }
+}
+----
+
+== Librerías para manejar Networking en Android
+
+* OkHttp (Propósito general y funcionalidades avanzadas)
+* Volley (Propósito general)
+* Retrofit (Servicios Rest)
+* Moshi (JSON)
+* Picasso (Imágenes)
+
+[NOTE.speaker]
+====
+OkHttp: Librería de propósito general, soporta HTTP/2, GZIP, invocaciones sincrónicas y asincrónicas.
+Volley: Librería de propósito general, soportada por Google.
+Retrofit: Es un cliente REST que usa OkHttp, adaptada para varios casos de uso, por ejemplo descarga de contenido, consumo de una API HTTP.
+Moshi: Librería para manejo de objetos JSON.
+Picasso: Librería para descarga de imágenes.
+====
+
+include::{partials}/self.ad[]
